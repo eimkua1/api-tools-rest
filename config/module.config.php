@@ -6,8 +6,12 @@
  * @license   https://github.com/laminas-api-tools/api-tools-rest/blob/master/LICENSE.md New BSD License
  */
 
+use Laminas\ApiTools\Rest\Factory\OptionsListenerFactory;
+use Laminas\ApiTools\Rest\Factory\RestControllerFactory;
+use Laminas\ApiTools\Rest\Listener\RestParametersListener;
+
 return [
-    'api-tools-rest' => [
+    'api-tools-rest'  => [
         // @codingStandardsIgnoreStart
         // 'Name of virtual controller' => [
         //     'collection_http_methods'    => [
@@ -35,23 +39,20 @@ return [
         // repeat for each controller you want to define
         // @codingStandardsIgnoreEnd
     ],
-
     'service_manager' => [
         'invokables' => [
-            'Laminas\ApiTools\Rest\RestParametersListener' => 'Laminas\ApiTools\Rest\Listener\RestParametersListener',
+            'Laminas\ApiTools\Rest\RestParametersListener' => RestParametersListener::class,
         ],
-        'factories' => [
-            'Laminas\ApiTools\Rest\OptionsListener' => 'Laminas\ApiTools\Rest\Factory\OptionsListenerFactory',
+        'factories'  => [
+            'Laminas\ApiTools\Rest\OptionsListener' => OptionsListenerFactory::class,
         ],
     ],
-
-    'controllers' => [
+    'controllers'     => [
         'abstract_factories' => [
-            'Laminas\ApiTools\Rest\Factory\RestControllerFactory',
+            RestControllerFactory::class,
         ],
     ],
-
-    'view_manager' => [
+    'view_manager'    => [
         // Enable this in your application configuration in order to get full
         // exception stack traces in your API-Problem responses.
         'display_exceptions' => false,

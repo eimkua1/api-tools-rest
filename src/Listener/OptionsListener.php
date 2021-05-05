@@ -15,13 +15,19 @@ use Laminas\Http\Request;
 use Laminas\Http\Response;
 use Laminas\Mvc\MvcEvent;
 
+use function array_key_exists;
+use function array_walk;
+use function implode;
+use function in_array;
+use function is_array;
+use function is_string;
+use function strtoupper;
+
 class OptionsListener implements ListenerAggregateInterface
 {
     use ListenerAggregateTrait;
 
-    /**
-     * @var array
-     */
+    /** @var array */
     protected $config;
 
     /**
@@ -33,7 +39,7 @@ class OptionsListener implements ListenerAggregateInterface
     }
 
     /**
-     * @param  EventManagerInterface $events
+     * @param int $priority
      */
     public function attach(EventManagerInterface $events, $priority = 1)
     {
@@ -41,8 +47,7 @@ class OptionsListener implements ListenerAggregateInterface
     }
 
     /**
-     * @param  MvcEvent $event
-     * @return void|\Laminas\Http\Response
+     * @return void|Response
      */
     public function onRoute(MvcEvent $event)
     {
@@ -113,7 +118,6 @@ class OptionsListener implements ListenerAggregateInterface
      * Create the Allow header
      *
      * @param  array $options
-     * @param  Response $response
      */
     protected function createAllowHeader(array $options, Response $response)
     {
@@ -126,7 +130,6 @@ class OptionsListener implements ListenerAggregateInterface
      *
      * Creates an empty response with an Allow header.
      *
-     * @param  MvcEvent $event
      * @param  array $options
      * @return Response
      */
@@ -140,7 +143,6 @@ class OptionsListener implements ListenerAggregateInterface
     /**
      * Prepare a 405 response
      *
-     * @param  MvcEvent $event
      * @param  array $options
      * @return Response
      */
@@ -161,12 +163,13 @@ class OptionsListener implements ListenerAggregateInterface
      *
      * @param mixed $config
      * @param mixed $matches
-     * @return void
+     * @return array
      */
     protected function getConfigForControllerAndMatches($config, $matches)
     {
         $collectionConfig = [];
-        if (array_key_exists('collection_http_methods', $config)
+        if (
+            array_key_exists('collection_http_methods', $config)
             && is_array($config['collection_http_methods'])
         ) {
             $collectionConfig = $config['collection_http_methods'];
@@ -185,7 +188,8 @@ class OptionsListener implements ListenerAggregateInterface
             return $collectionConfig;
         }
 
-        if (array_key_exists('entity_http_methods', $config)
+        if (
+            array_key_exists('entity_http_methods', $config)
             && is_array($config['entity_http_methods'])
         ) {
             $entityConfig = $config['entity_http_methods'];

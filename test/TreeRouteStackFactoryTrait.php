@@ -11,6 +11,8 @@ namespace LaminasTest\ApiTools\Rest;
 use Laminas\Mvc\Router\Http\TreeRouteStack as V2TreeRouteStack;
 use Laminas\Router\Http\TreeRouteStack;
 
+use function class_exists;
+
 trait TreeRouteStackFactoryTrait
 {
     /**

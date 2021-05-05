@@ -11,6 +11,8 @@ namespace LaminasTest\ApiTools\Rest;
 use Laminas\Mvc\Router\SimpleRouteStack as V2SimpleRouteStack;
 use Laminas\Router\SimpleRouteStack;
 
+use function class_exists;
+
 trait SimpleRouteStackFactoryTrait
 {
     /**

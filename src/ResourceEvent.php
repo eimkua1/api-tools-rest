@@ -19,31 +19,27 @@ use Laminas\Router\RouteMatch;
 use Laminas\Stdlib\Parameters;
 use Laminas\Stdlib\RequestInterface;
 
+use function get_class;
+use function gettype;
+use function is_array;
+use function is_object;
+use function sprintf;
+
 class ResourceEvent extends Event
 {
-    /**
-     * @var null|IdentityInterface
-     */
+    /** @var null|IdentityInterface */
     protected $identity;
 
-    /**
-     * @var null|InputFilterInterface
-     */
+    /** @var null|InputFilterInterface */
     protected $inputFilter;
 
-    /**
-     * @var null|Parameters
-     */
+    /** @var null|Parameters */
     protected $queryParams;
 
-    /**
-     * @var null|RequestInterface
-     */
+    /** @var null|RequestInterface */
     protected $request;
 
-    /**
-     * @var null|RouteMatch
-     */
+    /** @var null|RouteMatch */
     protected $routeMatch;
 
     /**
@@ -73,10 +69,9 @@ class ResourceEvent extends Event
     }
 
     /**
-     * @param null|IdentityInterface $identity
      * @return self
      */
-    public function setIdentity(IdentityInterface $identity = null)
+    public function setIdentity(?IdentityInterface $identity = null)
     {
         $this->identity = $identity;
         return $this;
@@ -91,10 +86,9 @@ class ResourceEvent extends Event
     }
 
     /**
-     * @param null|InputFilterInterface $inputFilter
      * @return self
      */
-    public function setInputFilter(InputFilterInterface $inputFilter = null)
+    public function setInputFilter(?InputFilterInterface $inputFilter = null)
     {
         $this->inputFilter = $inputFilter;
         return $this;
@@ -109,10 +103,9 @@ class ResourceEvent extends Event
     }
 
     /**
-     * @param Parameters $params
      * @return self
      */
-    public function setQueryParams(Parameters $params = null)
+    public function setQueryParams(?Parameters $params = null)
     {
         $this->queryParams = $params;
         return $this;
@@ -146,10 +139,9 @@ class ResourceEvent extends Event
     }
 
     /**
-     * @param null|RequestInterface $request
      * @return self
      */
-    public function setRequest(RequestInterface $request = null)
+    public function setRequest(?RequestInterface $request = null)
     {
         $this->request = $request;
         return $this;
@@ -175,7 +167,7 @@ class ResourceEvent extends Event
                 __METHOD__,
                 RouteMatch::class,
                 V2RouteMatch::class,
-                (is_object($matches) ? get_class($matches) : gettype($matches))
+                is_object($matches) ? get_class($matches) : gettype($matches)
             ));
         }
         $this->routeMatch = $matches;

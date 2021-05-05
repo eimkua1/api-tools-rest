@@ -8,6 +8,7 @@
 
 namespace LaminasTest\ApiTools\Rest;
 
+use Error;
 use Interop\Container\ContainerInterface;
 use Laminas\ApiTools\ApiProblem\ApiProblem;
 use Laminas\ApiTools\ApiProblem\ApiProblemResponse;
@@ -46,18 +47,26 @@ use Laminas\View\Helper\ServerUrl as ServerUrlHelper;
 use Laminas\View\Helper\Url as UrlHelper;
 use Laminas\View\Model\ModelInterface;
 use PHPUnit\Framework\TestCase;
+use Prophecy\PhpUnit\ProphecyTrait;
 use ReflectionMethod;
 use ReflectionObject;
 use stdClass;
 
-/**
- * @subpackage UnitTest
- */
+use function call_user_func_array;
+use function explode;
+use function get_class;
+use function method_exists;
+use function sort;
+use function version_compare;
+
+use const PHP_VERSION;
+
 class RestControllerTest extends TestCase
 {
+    use ProphecyTrait;
     use RouteMatchFactoryTrait;
-    use SimpleRouteStackFactoryTrait;
     use SegmentRouteFactoryTrait;
+    use SimpleRouteStackFactoryTrait;
 
     /** @var RestController */
     private $controller;
@@ -71,12 +80,12 @@ class RestControllerTest extends TestCase
     /** @var Resource */
     private $resource;
 
-    public function setUp()
+    public function setUp(): void
     {
         $this->controller = $controller = new RestController();
 
         $this->router = $router = $this->createSimpleRouteStack();
-        $route = $this->createSegmentRoute('/resource[/[:id]]');
+        $route        = $this->createSegmentRoute('/resource[/[:id]]');
         $router->addRoute('resource', $route);
         $this->event = $event = new MvcEvent();
         $event->setRouter($router);
@@ -100,7 +109,7 @@ class RestControllerTest extends TestCase
         $linksHelper = new HalHelper();
         $linksHelper->setLinkUrlBuilder($linkUrlBuilder);
 
-        $linkExtractor = new LinkExtractor($linkUrlBuilder);
+        $linkExtractor           = new LinkExtractor($linkUrlBuilder);
         $linkCollectionExtractor = new LinkCollectionExtractor($linkExtractor);
         $linksHelper->setLinkCollectionExtractor($linkCollectionExtractor);
 
@@ -113,7 +122,7 @@ class RestControllerTest extends TestCase
 
     public function testReturnsErrorResponseWhenPageSizeExceedsMax()
     {
-        $items = [
+        $items     = [
             ['id' => 'foo', 'bar' => 'baz'],
             ['id' => 'bar', 'bar' => 'baz'],
             ['id' => 'baz', 'bar' => 'baz'],
@@ -138,7 +147,7 @@ class RestControllerTest extends TestCase
 
     public function testReturnsErrorResponseWhenPageSizeInNotPositive()
     {
-        $items = [
+        $items     = [
             ['id' => 'foo', 'bar' => 'baz'],
             ['id' => 'bar', 'bar' => 'baz'],
             ['id' => 'baz', 'bar' => 'baz'],
@@ -166,7 +175,7 @@ class RestControllerTest extends TestCase
 
     public function testReturnsErrorResponseWhenPageSizeBelowMin()
     {
-        $items = [
+        $items     = [
             ['id' => 'foo', 'bar' => 'baz'],
             ['id' => 'bar', 'bar' => 'baz'],
             ['id' => 'baz', 'bar' => 'baz'],
@@ -203,12 +212,17 @@ class RestControllerTest extends TestCase
         $this->assertProblemApiResult(400, 'Page must be an integer; received "string"', $result);
     }
 
+    /**
+     * @param int $expectedStatus
+     * @param string $expectedDetail
+     * @param Response|ApiProblem|ApiProblemResponse|HalEntity $result
+     */
     public function assertProblemApiResult($expectedStatus, $expectedDetail, $result)
     {
         $this->assertInstanceOf(ApiProblem::class, $result);
         $problem = $result->toArray();
         $this->assertEquals($expectedStatus, $problem['status']);
-        $this->assertContains($expectedDetail, $problem['detail']);
+        $this->assertStringContainsString($expectedDetail, $problem['detail']);
     }
 
     public function testCreateReturnsProblemResultOnCreationException()
@@ -239,6 +253,9 @@ class RestControllerTest extends TestCase
         $this->assertFalse($headers->has('Location'));
     }
 
+    /**
+     * @return \Laminas\Http\PhpEnvironment\Response|ResponseInterface
+     */
     public function testCreateReturnsHalEntityOnSuccess()
     {
         $entity = ['id' => 'foo', 'bar' => 'baz'];
@@ -254,8 +271,6 @@ class RestControllerTest extends TestCase
 
     /**
      * @depends testCreateReturnsHalEntityOnSuccess
-     *
-     * @param ResponseInterface $response
      */
     public function testSuccessfulCreationWithEntityIdentifierSetsResponseLocationHeader(ResponseInterface $response)
     {
@@ -266,10 +281,7 @@ class RestControllerTest extends TestCase
     /**
      * @group 95
      * @group 96
-     *
      * @depends testCreateReturnsHalEntityOnSuccess
-     *
-     * @param ResponseInterface $response
      */
     public function testSuccessfulCreationWithEntityIdentifierSetsResponseContentLocationHeader(
         ResponseInterface $response
@@ -353,10 +365,13 @@ class RestControllerTest extends TestCase
         $this->assertEquals($entity, $result->getEntity());
     }
 
+    /**
+     * @return ApiProblem|HalCollection|HalEntity|Response
+     */
     public function testReturnsHalCollectionForNonPaginatedList()
     {
         $items = [
-            ['id' => 'foo', 'bar' => 'baz']
+            ['id' => 'foo', 'bar' => 'baz'],
         ];
         $this->resource->getEventManager()->attach('fetchAll', function ($e) use ($items) {
             return $items;
@@ -370,7 +385,7 @@ class RestControllerTest extends TestCase
 
     public function testReturnsHalCollectionForPaginatedList()
     {
-        $items = [
+        $items     = [
             ['id' => 'foo', 'bar' => 'baz'],
             ['id' => 'bar', 'bar' => 'baz'],
             ['id' => 'baz', 'bar' => 'baz'],
@@ -394,7 +409,7 @@ class RestControllerTest extends TestCase
 
     public function testReturnsHalCollectionForPaginatedListUsingPassedPageSizeParameter()
     {
-        $items = [
+        $items     = [
             ['id' => 'foo', 'bar' => 'baz'],
             ['id' => 'bar', 'bar' => 'baz'],
             ['id' => 'baz', 'bar' => 'baz'],
@@ -421,8 +436,6 @@ class RestControllerTest extends TestCase
 
     /**
      * @depends testReturnsHalCollectionForNonPaginatedList
-     *
-     * @param Collection $collection
      */
     public function testHalCollectionReturnedIncludesRoutes(Collection $collection)
     {
@@ -432,7 +445,7 @@ class RestControllerTest extends TestCase
 
     public function testHeadReturnsListResponseWhenNoIdProvided()
     {
-        $items = [
+        $items     = [
             ['id' => 'foo', 'bar' => 'baz'],
             ['id' => 'bar', 'bar' => 'baz'],
             ['id' => 'baz', 'bar' => 'baz'],
@@ -466,7 +479,7 @@ class RestControllerTest extends TestCase
 
     public function testOptionsReturnsEmptyResponseWithAllowHeaderPopulatedForCollection()
     {
-        $r = new ReflectionObject($this->controller);
+        $r               = new ReflectionObject($this->controller);
         $httpMethodsProp = $r->getProperty('collectionHttpMethods');
         $httpMethodsProp->setAccessible(true);
         $httpMethods = $httpMethodsProp->getValue($this->controller);
@@ -486,7 +499,7 @@ class RestControllerTest extends TestCase
 
     public function testOptionsReturnsEmptyResponseWithAllowHeaderPopulatedForEntity()
     {
-        $r = new ReflectionObject($this->controller);
+        $r               = new ReflectionObject($this->controller);
         $httpMethodsProp = $r->getProperty('entityHttpMethods');
         $httpMethodsProp->setAccessible(true);
         $httpMethods = $httpMethodsProp->getValue($this->controller);
@@ -510,7 +523,7 @@ class RestControllerTest extends TestCase
     {
         $this->controller->setIdentifierName('user_id');
 
-        $r = new ReflectionObject($this->controller);
+        $r               = new ReflectionObject($this->controller);
         $httpMethodsProp = $r->getProperty('entityHttpMethods');
         $httpMethodsProp->setAccessible(true);
         $httpMethods = $httpMethodsProp->getValue($this->controller);
@@ -584,11 +597,15 @@ class RestControllerTest extends TestCase
         $this->assertProblemApiResult(500, 'failed', $result);
     }
 
+    /**
+     * @return array|ApiProblem|HalCollection
+     */
     public function testReplaceListReturnsHalCollectionOnSuccess()
     {
         $items = [
             ['id' => 'foo', 'bar' => 'baz'],
-            ['id' => 'bar', 'bar' => 'baz']];
+            ['id' => 'bar', 'bar' => 'baz'],
+        ];
         $this->resource->getEventManager()->attach('replaceList', function ($e) use ($items) {
             return $items;
         });
@@ -599,6 +616,7 @@ class RestControllerTest extends TestCase
     }
 
     /**
+     * @param Collection $collection
      * @depends testReplaceListReturnsHalCollectionOnSuccess
      */
     public function testReplaceListReturnsHalCollectionWithRoutesInjected($collection)
@@ -677,7 +695,7 @@ class RestControllerTest extends TestCase
 
         $controller->setEventManager($events);
 
-        $test = new stdClass;
+        $test       = new stdClass();
         $test->flag = false;
         $sharedEvents->attach('MyNamespace\Controller\Foo', 'test', function ($e) use ($test) {
             $test->flag = true;
@@ -690,7 +708,7 @@ class RestControllerTest extends TestCase
     public function testHalCollectionUsesControllerCollectionName()
     {
         $items = [
-            ['id' => 'foo', 'bar' => 'baz']
+            ['id' => 'foo', 'bar' => 'baz'],
         ];
         $this->resource->getEventManager()->attach('fetchAll', function ($e) use ($items) {
             return $items;
@@ -705,8 +723,8 @@ class RestControllerTest extends TestCase
 
     public function testCreateUsesHalEntityReturnedByResource()
     {
-        $data     = ['id' => 'foo', 'data' => 'bar'];
-        $entity   = new HalEntity($data, 'foo', 'resource');
+        $data   = ['id' => 'foo', 'data' => 'bar'];
+        $entity = new HalEntity($data, 'foo', 'resource');
         $this->resource->getEventManager()->attach('create', function ($e) use ($entity) {
             return $entity;
         });
@@ -717,8 +735,8 @@ class RestControllerTest extends TestCase
 
     public function testGetUsesHalEntityReturnedByResource()
     {
-        $data     = ['id' => 'foo', 'data' => 'bar'];
-        $entity   = new HalEntity($data, 'foo', 'resource');
+        $data   = ['id' => 'foo', 'data' => 'bar'];
+        $entity = new HalEntity($data, 'foo', 'resource');
         $this->resource->getEventManager()->attach('fetch', function ($e) use ($entity) {
             return $entity;
         });
@@ -740,8 +758,8 @@ class RestControllerTest extends TestCase
 
     public function testPatchUsesHalEntityReturnedByResource()
     {
-        $data     = ['id' => 'foo', 'data' => 'bar'];
-        $entity   = new HalEntity($data, 'foo', 'resource');
+        $data   = ['id' => 'foo', 'data' => 'bar'];
+        $entity = new HalEntity($data, 'foo', 'resource');
         $this->resource->getEventManager()->attach('patch', function ($e) use ($entity) {
             return $entity;
         });
@@ -752,8 +770,8 @@ class RestControllerTest extends TestCase
 
     public function testUpdateUsesHalEntityReturnedByResource()
     {
-        $data     = ['id' => 'foo', 'data' => 'bar'];
-        $entity   = new HalEntity($data, 'foo', 'resource');
+        $data   = ['id' => 'foo', 'data' => 'bar'];
+        $entity = new HalEntity($data, 'foo', 'resource');
         $this->resource->getEventManager()->attach('update', function ($e) use ($entity) {
             return $entity;
         });
@@ -788,9 +806,9 @@ class RestControllerTest extends TestCase
             $test->pre_data = $e->getParam('data');
         });
         $this->controller->getEventManager()->attach('create.post', function ($e) use ($test) {
-            $test->post = true;
+            $test->post      = true;
             $test->post_data = $e->getParam('data');
-            $test->entity = $e->getParam('entity');
+            $test->entity    = $e->getParam('entity');
         });
 
         $data   = ['id' => 'foo', 'data' => 'bar'];
@@ -817,11 +835,11 @@ class RestControllerTest extends TestCase
         ];
 
         $this->controller->getEventManager()->attach('delete.pre', function ($e) use ($test) {
-            $test->pre      = true;
+            $test->pre    = true;
             $test->pre_id = $e->getParam('id');
         });
         $this->controller->getEventManager()->attach('delete.post', function ($e) use ($test) {
-            $test->post = true;
+            $test->post    = true;
             $test->post_id = $e->getParam('id');
         });
 
@@ -906,11 +924,11 @@ class RestControllerTest extends TestCase
         ];
 
         $this->controller->getEventManager()->attach('options.pre', function ($e) use ($test) {
-            $test->pre = true;
+            $test->pre         = true;
             $test->pre_options = $e->getParam('options');
         });
         $this->controller->getEventManager()->attach('options.post', function ($e) use ($test) {
-            $test->post = true;
+            $test->post         = true;
             $test->post_options = $e->getParam('options');
         });
 
@@ -934,11 +952,11 @@ class RestControllerTest extends TestCase
         ];
 
         $this->controller->getEventManager()->attach('options.pre', function ($e) use ($test) {
-            $test->pre = true;
+            $test->pre         = true;
             $test->pre_options = $e->getParam('options');
         });
         $this->controller->getEventManager()->attach('options.post', function ($e) use ($test) {
-            $test->post = true;
+            $test->post         = true;
             $test->post_options = $e->getParam('options');
         });
 
@@ -963,7 +981,7 @@ class RestControllerTest extends TestCase
             $test->pre = true;
         });
         $this->controller->getEventManager()->attach('getList.post', function ($e) use ($test) {
-            $test->post = true;
+            $test->post       = true;
             $test->collection = $e->getParam('collection');
         });
 
@@ -1000,14 +1018,14 @@ class RestControllerTest extends TestCase
             $test->pre_data = $e->getParam('data');
         });
         $this->controller->getEventManager()->attach('patch.post', function ($e) use ($test) {
-            $test->post = true;
+            $test->post      = true;
             $test->post_id   = $e->getParam('id');
             $test->post_data = $e->getParam('data');
             $test->entity    = $e->getParam('entity');
         });
 
-        $data     = ['id' => 'foo', 'data' => 'bar'];
-        $entity   = new HalEntity($data, 'foo', 'resource');
+        $data   = ['id' => 'foo', 'data' => 'bar'];
+        $entity = new HalEntity($data, 'foo', 'resource');
         $this->resource->getEventManager()->attach('patch', function ($e) use ($entity) {
             return $entity;
         });
@@ -1040,14 +1058,14 @@ class RestControllerTest extends TestCase
             $test->pre_data = $e->getParam('data');
         });
         $this->controller->getEventManager()->attach('update.post', function ($e) use ($test) {
-            $test->post = true;
+            $test->post      = true;
             $test->post_id   = $e->getParam('id');
             $test->post_data = $e->getParam('data');
             $test->entity    = $e->getParam('entity');
         });
 
-        $data     = ['id' => 'foo', 'data' => 'bar'];
-        $entity   = new HalEntity($data, 'foo', 'resource');
+        $data   = ['id' => 'foo', 'data' => 'bar'];
+        $entity = new HalEntity($data, 'foo', 'resource');
         $this->resource->getEventManager()->attach('update', function ($e) use ($entity) {
             return $entity;
         });
@@ -1077,8 +1095,8 @@ class RestControllerTest extends TestCase
             $test->pre_data = $e->getParam('data');
         });
         $this->controller->getEventManager()->attach('replaceList.post', function ($e) use ($test) {
-            $test->post = true;
-            $test->post_data = $e->getParam('data');
+            $test->post       = true;
+            $test->post_data  = $e->getParam('data');
             $test->collection = $e->getParam('collection');
         });
 
@@ -1127,29 +1145,38 @@ class RestControllerTest extends TestCase
         $this->assertEquals($this->resource, $this->controller->getResource());
     }
 
+    /**
+     * @return array
+     */
     public function eventsProducingApiProblems()
     {
         return [
-            'delete' => [
-                'delete', 'delete', 'foo',
+            'delete'     => [
+                'delete',
+                'delete',
+                'foo',
             ],
             'deleteList' => [
-                'deleteList', 'deleteList', null,
+                'deleteList',
+                'deleteList',
+                null,
             ],
-            'get' => [
-                'fetch', 'get', 'foo',
+            'get'        => [
+                'fetch',
+                'get',
+                'foo',
             ],
-            'getList' => [
-                'fetchAll', 'getList', null,
+            'getList'    => [
+                'fetchAll',
+                'getList',
+                null,
             ],
         ];
     }
 
     /**
      * @group 36
-     *
      * @dataProvider eventsProducingApiProblems
-     *
      * @param string $event
      * @param string $method
      * @param null|string $args
@@ -1177,7 +1204,7 @@ class RestControllerTest extends TestCase
 
     public function testUsesConfiguredIdentifierNameToGetIdentifier()
     {
-        $r = new ReflectionObject($this->controller);
+        $r             = new ReflectionObject($this->controller);
         $getIdentifier = $r->getMethod('getIdentifier');
         $getIdentifier->setAccessible(true);
 
@@ -1348,6 +1375,9 @@ class RestControllerTest extends TestCase
         $this->assertProblemApiResult(500, 'failed', $result);
     }
 
+    /**
+     * @return array|ApiProblem|HalCollection
+     */
     public function testPatchListReturnsHalCollectionOnSuccess()
     {
         $items = [
@@ -1365,8 +1395,6 @@ class RestControllerTest extends TestCase
 
     /**
      * @depends testPatchListReturnsHalCollectionOnSuccess
-     *
-     * @param Collection $collection
      */
     public function testPatchListReturnsHalCollectionWithRoutesInjected(Collection $collection)
     {
@@ -1400,8 +1428,8 @@ class RestControllerTest extends TestCase
             $test->pre_data = $e->getParam('data');
         });
         $this->controller->getEventManager()->attach('patchList.post', function ($e) use ($test) {
-            $test->post = true;
-            $test->post_data = $e->getParam('data');
+            $test->post       = true;
+            $test->post_data  = $e->getParam('data');
             $test->collection = $e->getParam('collection');
         });
 
@@ -1439,52 +1467,55 @@ class RestControllerTest extends TestCase
         $this->assertSame($problem, $result);
     }
 
+    /**
+     * @return array[]
+     */
     public function validResourcePayloads()
     {
         return [
-            'GET_collection' => [
+            'GET_collection'    => [
                 'GET',
                 'fetchAll',
                 null,
                 null,
                 [],
             ],
-            'GET_item' => [
+            'GET_item'          => [
                 'GET',
                 'fetch',
                 'foo',
                 null,
                 ['id' => 'foo', 'bar' => 'baz'],
             ],
-            'POST' => [
+            'POST'              => [
                 'POST',
                 'create',
                 null,
                 ['bar' => 'baz'],
                 ['id' => 'foo', 'bar' => 'baz'],
             ],
-            'PUT_collection' => [
+            'PUT_collection'    => [
                 'PUT',
                 'replaceList',
                 null,
                 [['id' => 'foo', 'bar' => 'bat']],
                 [['id' => 'foo', 'bar' => 'bat']],
             ],
-            'PUT_item' => [
+            'PUT_item'          => [
                 'PUT',
                 'update',
                 'foo',
                 ['bar' => 'bat'],
                 ['id' => 'foo', 'bar' => 'bat'],
             ],
-            'PATCH_collection' => [
+            'PATCH_collection'  => [
                 'PATCH',
                 'patchList',
                 null,
                 ['foo' => ['bar' => 'bat']],
                 [['id' => 'foo', 'bar' => 'bat']],
             ],
-            'PATCH_item' => [
+            'PATCH_item'        => [
                 'PATCH',
                 'patch',
                 'foo',
@@ -1498,7 +1529,7 @@ class RestControllerTest extends TestCase
                 null,
                 true,
             ],
-            'DELETE_item' => [
+            'DELETE_item'       => [
                 'DELETE',
                 'delete',
                 'foo',
@@ -1510,7 +1541,6 @@ class RestControllerTest extends TestCase
 
     /**
      * @dataProvider validResourcePayloads
-     *
      * @param string $method
      * @param string $event
      * @param null|string $id
@@ -1538,7 +1568,7 @@ class RestControllerTest extends TestCase
         $this->event->setRequest($request);
 
         $container = new ParameterDataContainer();
-        $container->setBodyParams((null === $data) ? [] : $data);
+        $container->setBodyParams($data ?? []);
         $this->event->setParam('LaminasContentNegotiationParameterData', $container);
 
         if ($id) {
@@ -1554,7 +1584,6 @@ class RestControllerTest extends TestCase
         $this->assertSame($inputFilter, $resourceEvent->getInputFilter());
     }
 
-
     /**
      * @group api-tools-mvc-auth-20
      */
@@ -1568,7 +1597,7 @@ class RestControllerTest extends TestCase
 
     public function testInjectsRequestFromControllerIntoResourceEvent()
     {
-        $request = $this->controller->getRequest();
+        $request  = $this->controller->getRequest();
         $resource = $this->controller->getResource();
 
         $r = new ReflectionObject($resource);
@@ -1578,6 +1607,9 @@ class RestControllerTest extends TestCase
         $this->assertSame($request, $event->getRequest());
     }
 
+    /**
+     * @return object[][]
+     */
     public function entitiesReturnedForCollections()
     {
         return [
@@ -1588,9 +1620,7 @@ class RestControllerTest extends TestCase
 
     /**
      * @group 31
-     *
      * @dataProvider entitiesReturnedForCollections
-     *
      * @param stdClass $entity
      */
     public function testGetListAllowsReturningEntitiesInsteadOfCollections($entity)
@@ -1604,6 +1634,9 @@ class RestControllerTest extends TestCase
         $this->assertSame($entity, $result->getEntity());
     }
 
+    /**
+     * @return array[]
+     */
     public function methods()
     {
         return [
@@ -1621,9 +1654,7 @@ class RestControllerTest extends TestCase
 
     /**
      * @group 68
-     *
      * @dataProvider methods
-     *
      * @param string $method
      * @param string $event
      * @param array $argv
@@ -1658,7 +1689,7 @@ class RestControllerTest extends TestCase
      */
     public function testAllowsReturningHalCollectionFromCreate()
     {
-        $collection = [
+        $collection    = [
             [
                 'id'  => 1,
                 'foo' => 'bar',
@@ -1705,7 +1736,7 @@ class RestControllerTest extends TestCase
      */
     public function testAllowsReturningHalEntityFromCreate()
     {
-        $entity = [
+        $entity    = [
             'id'  => 1,
             'foo' => 'bar',
         ];
@@ -1731,7 +1762,7 @@ class RestControllerTest extends TestCase
      */
     public function testCreateHalEntityInjectsExistingEntityWithSelfRelationalLinkIfNotPresent()
     {
-        $entity = [
+        $entity    = [
             'id'  => 1,
             'foo' => 'bar',
         ];
@@ -1750,12 +1781,12 @@ class RestControllerTest extends TestCase
      */
     public function testCreateHalEntityDoesNotInjectExistingEntityWithSelfRelationalLinkIfAlreadyPresent()
     {
-        $entity = [
+        $entity    = [
             'id'  => 1,
             'foo' => 'bar',
         ];
         $halEntity = new HalEntity($entity, 1);
-        $self = Link::factory([
+        $self      = Link::factory([
             'rel' => 'self',
             'url' => 'http://example.com/foo/1',
         ]);
@@ -1775,7 +1806,7 @@ class RestControllerTest extends TestCase
      */
     public function testCreateHalCollectionInjectsExistingCollectionWithSelfRelationalLinkIfNotPresent()
     {
-        $collection = [
+        $collection    = [
             [
                 'id'  => 1,
                 'foo' => 'bar',
@@ -1804,7 +1835,7 @@ class RestControllerTest extends TestCase
      */
     public function testCreateHalCollectionInjectsExistingCollectionWithMetadataIfMissing()
     {
-        $collection = [
+        $collection    = [
             [
                 'id'  => 1,
                 'foo' => 'bar',
@@ -1841,6 +1872,7 @@ class RestControllerTest extends TestCase
 
     /**
      * @group 97
+     * @return Headers
      */
     public function testLocationHeaderGeneratedDuringCreateContainsOnlyLinkHref()
     {
@@ -1849,7 +1881,7 @@ class RestControllerTest extends TestCase
         $self->setProps(['vary' => 'true']);
 
         $entity = new HalEntity(['id' => 'foo', 'bar' => 'baz'], 'foo');
-        $links = $entity->getLinks();
+        $links  = $entity->getLinks();
         $links->add($self, true);
 
         $this->resource->getEventManager()->attach('create', function ($e) use ($entity) {
@@ -1864,8 +1896,8 @@ class RestControllerTest extends TestCase
         $this->assertTrue($headers->has('Location'));
 
         $location = $headers->get('Location')->getFieldValue();
-        $this->assertContains('http://localhost.localdomain/resource/foo', $location);
-        $this->assertNotContains('true', $location);
+        $this->assertStringContainsString('http://localhost.localdomain/resource/foo', $location);
+        $this->assertStringNotContainsString('true', $location);
 
         return $headers;
     }
@@ -1873,23 +1905,19 @@ class RestControllerTest extends TestCase
     /**
      * @group 95
      * @group 96
-     *
      * @depends testLocationHeaderGeneratedDuringCreateContainsOnlyLinkHref
-     *
-     * @param Headers $headers
      */
     public function testContentLocationHeaderIsGeneratedOnlyFromLinkHref(Headers $headers)
     {
         $this->assertTrue($headers->has('Content-Location'));
         $location = $headers->get('Content-Location')->getFieldValue();
 
-        $this->assertContains('http://localhost.localdomain/resource/foo', $location);
-        $this->assertNotContains('true', $location);
+        $this->assertStringContainsString('http://localhost.localdomain/resource/foo', $location);
+        $this->assertStringNotContainsString('true', $location);
     }
 
     /**
      * @dataProvider methods
-     *
      * @param string $method
      * @param string $event
      * @param array $argv
@@ -1901,7 +1929,7 @@ class RestControllerTest extends TestCase
         }
 
         $this->resource->getEventManager()->attach($event, function ($e) {
-            throw new \Error('error: failed');
+            throw new Error('error: failed');
         });
 
         $result = call_user_func_array([$this->controller, $method], $argv);
@@ -1910,7 +1938,6 @@ class RestControllerTest extends TestCase
 
     /**
      * @dataProvider methods
-     *
      * @param string $method
      * @param string $event
      * @param array $argv

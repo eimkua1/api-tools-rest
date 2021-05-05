@@ -43,12 +43,15 @@ use Laminas\View\Helper\ServerUrl as ServerUrlHelper;
 use Laminas\View\Helper\Url as UrlHelper;
 use Laminas\View\HelperPluginManager;
 use PHPUnit\Framework\TestCase;
+use Prophecy\PhpUnit\ProphecyTrait;
 
-/**
- * @subpackage UnitTest
- */
+use function json_decode;
+use function method_exists;
+use function sprintf;
+
 class CollectionIntegrationTest extends TestCase
 {
+    use ProphecyTrait;
     use TreeRouteStackFactoryTrait;
 
     /** @var HalHelper */
@@ -78,7 +81,7 @@ class CollectionIntegrationTest extends TestCase
     /** @var RestController */
     private $controller;
 
-    public function setUp()
+    public function setUp(): void
     {
         $this->setUpRenderer();
         $this->setUpController();
@@ -103,7 +106,7 @@ class CollectionIntegrationTest extends TestCase
         $this->linksHelper = $linksHelper = new HalHelper();
         $linksHelper->setLinkUrlBuilder($linkUrlBuilder);
 
-        $linkExtractor = new LinkExtractor($linkUrlBuilder);
+        $linkExtractor           = new LinkExtractor($linkUrlBuilder);
         $linkCollectionExtractor = new LinkCollectionExtractor($linkExtractor);
         $linksHelper->setLinkCollectionExtractor($linkCollectionExtractor);
 
@@ -133,11 +136,11 @@ class CollectionIntegrationTest extends TestCase
 
         $this->setUpRequest();
 
-        $routes = [
+        $routes       = [
             'resource' => [
-                'type' => 'Segment',
+                'type'    => 'Segment',
                 'options' => [
-                    'route' => '/api/resource[/:id]',
+                    'route'    => '/api/resource[/:id]',
                     'defaults' => [
                         'controller' => 'Api\RestController',
                     ],
@@ -155,6 +158,9 @@ class CollectionIntegrationTest extends TestCase
         $this->matches = $matches;
     }
 
+    /**
+     * @return Paginator
+     */
     public function setUpCollection()
     {
         $collection = [];
@@ -198,6 +204,9 @@ class CollectionIntegrationTest extends TestCase
         $this->setUpContentNegotiation($controller);
     }
 
+    /**
+     * @param RestController $controller
+     */
     public function setUpContentNegotiation($controller)
     {
         $plugins = new ControllerPluginManager($this->prophesize(ContainerInterface::class)->reveal());
@@ -210,7 +219,7 @@ class CollectionIntegrationTest extends TestCase
         $viewModelSelector = $plugins->get('AcceptableViewModelSelector');
         $acceptListener    = new AcceptListener($viewModelSelector, [
             'controllers' => [],
-            'selectors'  => [
+            'selectors'   => [
                 'HalJson' => [
                     HalJsonModel::class => [
                         'application/json',
@@ -232,7 +241,7 @@ class CollectionIntegrationTest extends TestCase
         $request = $this->request = new Request();
         $request->setQuery(new Parameters([
             'query' => 'foo',
-            'bar' => 'baz',
+            'bar'   => 'baz',
             'page'  => 2,
         ]));
         $request->setUri($uri);
@@ -250,6 +259,9 @@ class CollectionIntegrationTest extends TestCase
         $this->response = new Response();
     }
 
+    /**
+     * @return MvcEvent
+     */
     public function getEvent()
     {
         $this->setUpResponse();
@@ -264,8 +276,8 @@ class CollectionIntegrationTest extends TestCase
     public function testCollectionLinksIncludeFullQueryString()
     {
         $this->controller->getEventManager()->attach('getList.post', function ($e) {
-            $request    = $e->getTarget()->getRequest();
-            $query = $request->getQuery('query', false);
+            $request = $e->getTarget()->getRequest();
+            $query   = $request->getQuery('query', false);
             if (! $query) {
                 return;
             }
@@ -280,20 +292,20 @@ class CollectionIntegrationTest extends TestCase
         $result = $this->controller->dispatch($this->request, $this->response);
         $this->assertInstanceOf(HalJsonModel::class, $result);
 
-        $json = $this->renderer->render($result);
+        $json    = $this->renderer->render($result);
         $payload = json_decode($json, true);
         $this->assertArrayHasKey('_links', $payload);
         $links = $payload['_links'];
         foreach ($links as $name => $link) {
             $this->assertArrayHasKey('href', $link);
             if ('first' !== $name) {
-                $this->assertContains(
+                $this->assertStringContainsString(
                     'page=',
                     $link['href'],
                     "Link $name ('{$link['href']}') is missing page query param"
                 );
             }
-            $this->assertContains(
+            $this->assertStringContainsString(
                 'query=foo',
                 $link['href'],
                 "Link $name ('{$link['href']}') is missing query query param"
@@ -301,9 +313,12 @@ class CollectionIntegrationTest extends TestCase
         }
     }
 
+    /**
+     * @return ServiceManager
+     */
     public function getServiceManager()
     {
-        $services    = new ServiceManager();
+        $services = new ServiceManager();
         $services->setService('config', [
             'api-tools-rest' => [
                 'Api\RestController' => [
@@ -372,7 +387,7 @@ class CollectionIntegrationTest extends TestCase
 
     public function testFactoryEnabledListenerCreatesQueryStringWhitelist()
     {
-        $services = $this->getServiceManager();
+        $services   = $this->getServiceManager();
         $controller = $services->get('ControllerManager')->get('Api\RestController');
         $controller->setEvent($this->getEvent());
         $this->setUpContentNegotiation($controller);
@@ -380,25 +395,25 @@ class CollectionIntegrationTest extends TestCase
         $result = $controller->dispatch($this->request, $this->response);
         $this->assertInstanceOf(HalJsonModel::class, $result);
 
-        $json = $this->renderer->render($result);
+        $json    = $this->renderer->render($result);
         $payload = json_decode($json, true);
         $this->assertArrayHasKey('_links', $payload);
         $links = $payload['_links'];
         foreach ($links as $name => $link) {
             $this->assertArrayHasKey('href', $link);
             if ('first' !== $name) {
-                $this->assertContains(
+                $this->assertStringContainsString(
                     'page=',
                     $link['href'],
                     "Link $name ('{$link['href']}') is missing page query param"
                 );
             }
-            $this->assertContains(
+            $this->assertStringContainsString(
                 'query=foo',
                 $link['href'],
                 "Link $name ('{$link['href']}') is missing query query param"
             );
-            $this->assertNotContains(
+            $this->assertStringNotContainsString(
                 'bar=baz',
                 $link['href'],
                 "Link $name ('{$link['href']}') includes query param that should have been omitted"
@@ -408,7 +423,7 @@ class CollectionIntegrationTest extends TestCase
 
     public function testFactoryEnabledListenerInjectsWhitelistedQueryParams()
     {
-        $services = $this->getServiceManager();
+        $services   = $this->getServiceManager();
         $controller = $services->get('ControllerManager')->get('Api\RestController');
         $controller->setEvent($this->getEvent());
         $this->setUpContentNegotiation($controller);
@@ -425,14 +440,14 @@ class CollectionIntegrationTest extends TestCase
 
     public function testFactoryEnabledListenerMergeWhitelistedQueryParamsWithInputFilterKeys()
     {
-        $services = $this->getServiceManager();
+        $services   = $this->getServiceManager();
         $controller = $services->get('ControllerManager')->get('Api\RestController');
         $controller->setEvent($this->getEvent());
         $inputFilter = new InputFilter();
         $inputFilter->add([
-            'name' => 'bar',
-            'required' => false,
-            'allowEmpty' => true
+            'name'       => 'bar',
+            'required'   => false,
+            'allowEmpty' => true,
         ]);
         $controller->getResource()->setInputFilter($inputFilter);
         $this->setUpContentNegotiation($controller);

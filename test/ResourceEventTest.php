@@ -30,13 +30,13 @@ class ResourceEventTest extends TestCase
     /** @var ResourceEvent */
     private $event;
 
-    public function setUp()
+    public function setUp(): void
     {
         $this->matches = $this->createRouteMatch([
             'foo' => 'bar',
             'baz' => 'inga',
         ]);
-        $this->query = new Parameters([
+        $this->query   = new Parameters([
             'foo' => 'bar',
             'baz' => 'inga',
         ]);
@@ -54,6 +54,9 @@ class ResourceEventTest extends TestCase
         $this->assertNull($this->event->getQueryParams());
     }
 
+    /**
+     * @return ResourceEvent
+     */
     public function testRouteMatchIsMutable()
     {
         $this->event->setRouteMatch($this->matches);
@@ -61,6 +64,9 @@ class ResourceEventTest extends TestCase
         return $this->event;
     }
 
+    /**
+     * @return ResourceEvent
+     */
     public function testQueryParamsAreMutable()
     {
         $this->event->setQueryParams($this->query);
@@ -73,6 +79,9 @@ class ResourceEventTest extends TestCase
         $this->assertNull($this->event->getRequest());
     }
 
+    /**
+     * @return ResourceEvent
+     */
     public function testRequestIsMutable()
     {
         $request = new HttpRequest();
@@ -83,8 +92,6 @@ class ResourceEventTest extends TestCase
 
     /**
      * @depends testRouteMatchIsMutable
-     *
-     * @param ResourceEvent $event
      */
     public function testRouteMatchIsNullable(ResourceEvent $event)
     {
@@ -94,8 +101,6 @@ class ResourceEventTest extends TestCase
 
     /**
      * @depends testQueryParamsAreMutable
-     *
-     * @param ResourceEvent $event
      */
     public function testQueryParamsAreNullable(ResourceEvent $event)
     {
@@ -105,8 +110,6 @@ class ResourceEventTest extends TestCase
 
     /**
      * @depends testRequestIsMutable
-     *
-     * @param ResourceEvent $event
      */
     public function testRequestIsNullable(ResourceEvent $event)
     {

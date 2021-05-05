@@ -11,24 +11,35 @@ namespace LaminasTest\ApiTools\Rest\TestAsset;
 use Laminas\EventManager\EventManagerInterface;
 use Laminas\EventManager\ListenerAggregateInterface;
 use Laminas\EventManager\ListenerAggregateTrait;
+use Laminas\Paginator\Paginator;
 
 class CollectionIntegrationListener implements ListenerAggregateInterface
 {
     use ListenerAggregateTrait;
 
+    /** @var Paginator */
     public $collection;
 
+    /**
+     * @param int $priority
+     */
     public function attach(EventManagerInterface $events, $priority = 1)
     {
         $this->listeners[] = $events->attach('fetchAll', [$this, 'onFetchAll']);
     }
 
+    /**
+     * @param Paginator $collection
+     */
     public function setCollection($collection)
     {
         $this->collection = $collection;
     }
 
-    public function onFetchAll($e)
+    /**
+     * @return Paginator
+     */
+    public function onFetchAll()
     {
         return $this->collection;
     }

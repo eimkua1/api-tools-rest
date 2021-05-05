@@ -10,11 +10,11 @@ namespace LaminasTest\ApiTools\Rest\TestAsset;
 
 use JsonSerializable as JsonSerializableInterface;
 
-/**
- * @subpackage UnitTest
- */
 class JsonSerializable implements JsonSerializableInterface
 {
+    /**
+     * @return string[]
+     */
     public function jsonSerialize()
     {
         return ['foo' => 'bar'];

@@ -31,14 +31,17 @@ use Laminas\View\Helper\ServerUrl as ServerUrlHelper;
 use Laminas\View\Helper\Url as UrlHelper;
 use Laminas\View\HelperPluginManager;
 use PHPUnit\Framework\TestCase;
+use Prophecy\PhpUnit\ProphecyTrait;
 use ReflectionObject;
 use stdClass;
 
-/**
- * @subpackage UnitTest
- */
+use function call_user_func_array;
+use function json_decode;
+use function method_exists;
+
 class ChildResourcesIntegrationTest extends TestCase
 {
+    use ProphecyTrait;
     use RouteMatchFactoryTrait;
     use TreeRouteStackFactoryTrait;
 
@@ -63,7 +66,7 @@ class ChildResourcesIntegrationTest extends TestCase
     /** @var ControllerPluginManager */
     private $plugins;
 
-    public function setUp()
+    public function setUp(): void
     {
         $this->setupRouter();
         $this->setupHelpers();
@@ -90,7 +93,7 @@ class ChildResourcesIntegrationTest extends TestCase
         $linksHelper = new HalHelper();
         $linksHelper->setLinkUrlBuilder($linkUrlBuilder);
 
-        $linkExtractor = new LinkExtractor($linkUrlBuilder);
+        $linkExtractor           = new LinkExtractor($linkUrlBuilder);
         $linkCollectionExtractor = new LinkCollectionExtractor($linkExtractor);
         $linksHelper->setLinkCollectionExtractor($linkCollectionExtractor);
 
@@ -120,21 +123,21 @@ class ChildResourcesIntegrationTest extends TestCase
 
     public function setupRouter()
     {
-        $routes = [
+        $routes       = [
             'parent' => [
-                'type' => 'Segment',
-                'options' => [
-                    'route' => '/api/parent[/:parent]',
+                'type'          => 'Segment',
+                'options'       => [
+                    'route'    => '/api/parent[/:parent]',
                     'defaults' => [
                         'controller' => 'Api\ParentController',
                     ],
                 ],
                 'may_terminate' => true,
-                'child_routes' => [
+                'child_routes'  => [
                     'child' => [
-                        'type' => 'Segment',
+                        'type'    => 'Segment',
                         'options' => [
-                            'route' => '/child[/:child]',
+                            'route'    => '/child[/:child]',
                             'defaults' => [
                                 'controller' => 'Api\ChildController',
                             ],
@@ -147,13 +150,16 @@ class ChildResourcesIntegrationTest extends TestCase
         $router->addRoutes($routes);
     }
 
+    /**
+     * @return HalEntity
+     */
     public function setUpParentResource()
     {
         $this->parent = (object) [
             'id'   => 'anakin',
             'name' => 'Anakin Skywalker',
         ];
-        $resource = new HalEntity($this->parent, 'anakin');
+        $resource     = new HalEntity($this->parent, 'anakin');
 
         $link = new Link('self');
         $link->setRoute('parent');
@@ -163,13 +169,18 @@ class ChildResourcesIntegrationTest extends TestCase
         return $resource;
     }
 
+    /**
+     * @param string $id
+     * @param string $name
+     * @return HalEntity
+     */
     public function setUpChildResource($id, $name)
     {
         $this->child = (object) [
             'id'   => $id,
             'name' => $name,
         ];
-        $resource = new HalEntity($this->child, $id);
+        $resource    = new HalEntity($this->child, $id);
 
         $link = new Link('self');
         $link->setRoute('parent/child');
@@ -179,9 +190,12 @@ class ChildResourcesIntegrationTest extends TestCase
         return $resource;
     }
 
+    /**
+     * @return HalCollection
+     */
     public function setUpChildCollection()
     {
-        $children = [
+        $children         = [
             ['luke', 'Luke Skywalker'],
             ['leia', 'Leia Organa'],
         ];
@@ -205,21 +219,21 @@ class ChildResourcesIntegrationTest extends TestCase
 
     public function setUpAlternateRouter()
     {
-        $routes = [
+        $routes       = [
             'parent' => [
-                'type' => 'Segment',
-                'options' => [
-                    'route' => '/api/parent[/:id]',
+                'type'          => 'Segment',
+                'options'       => [
+                    'route'    => '/api/parent[/:id]',
                     'defaults' => [
                         'controller' => 'Api\ParentController',
                     ],
                 ],
                 'may_terminate' => true,
-                'child_routes' => [
+                'child_routes'  => [
                     'child' => [
-                        'type' => 'Segment',
+                        'type'    => 'Segment',
                         'options' => [
-                            'route' => '/child[/:child_id]',
+                            'route'    => '/child[/:child_id]',
                             'defaults' => [
                                 'controller' => 'Api\ChildController',
                             ],
@@ -252,7 +266,7 @@ class ChildResourcesIntegrationTest extends TestCase
         $m = $r->getMethod('getIdentifier');
         $m->setAccessible(true);
 
-        $uri = 'http://localhost.localdomain/api/parent/anakin/child/luke';
+        $uri     = 'http://localhost.localdomain/api/parent/anakin/child/luke';
         $request = new Request();
         $request->setUri($uri);
         $matches = $this->router->match($request);
@@ -270,7 +284,7 @@ class ChildResourcesIntegrationTest extends TestCase
 
         $result = $controller->get('luke');
         $this->assertInstanceOf(Entity::class, $result);
-        $self = $result->getLinks()->get('self');
+        $self   = $result->getLinks()->get('self');
         $params = $self->getRouteParams();
         $this->assertArrayHasKey('child_id', $params);
         $this->assertEquals('luke', $params['child_id']);
@@ -303,7 +317,7 @@ class ChildResourcesIntegrationTest extends TestCase
         $m = $r->getMethod('getIdentifier');
         $m->setAccessible(true);
 
-        $uri = 'http://localhost.localdomain/api/parent/anakin/child';
+        $uri     = 'http://localhost.localdomain/api/parent/anakin/child';
         $request = new Request();
         $request->setUri($uri);
         $matches = $this->router->match($request);
@@ -331,13 +345,13 @@ class ChildResourcesIntegrationTest extends TestCase
 
         $this->assertObjectHasAttribute('_embedded', $test);
         $this->assertObjectHasAttribute('children', $test->_embedded);
-        $this->assertInternalType('array', $test->_embedded->children);
+        $this->assertIsArray($test->_embedded->children);
 
         foreach ($test->_embedded->children as $child) {
             $this->assertObjectHasAttribute('_links', $child);
             $this->assertObjectHasAttribute('self', $child->_links);
             $this->assertObjectHasAttribute('href', $child->_links->self);
-            $this->assertRegExp(
+            $this->assertMatchesRegularExpression(
                 '#^http://localhost.localdomain/api/parent/anakin/child/[^/]+$#',
                 $child->_links->self->href
             );

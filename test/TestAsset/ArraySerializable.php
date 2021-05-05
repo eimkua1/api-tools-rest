@@ -8,16 +8,19 @@
 
 namespace LaminasTest\ApiTools\Rest\TestAsset;
 
-/**
- * @subpackage UnitTest
- */
 class ArraySerializable
 {
+    /**
+     * @return string
+     */
     public function getHijinx()
     {
         return 'should not get this';
     }
 
+    /**
+     * @return string[]
+     */
     public function getArrayCopy()
     {
         return ['foo' => 'bar'];

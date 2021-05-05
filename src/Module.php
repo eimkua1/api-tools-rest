@@ -8,7 +8,6 @@
 
 namespace Laminas\ApiTools\Rest;
 
-use Laminas\Loader\StandardAutoloader;
 use Laminas\Mvc\MvcEvent;
 
 /**
@@ -30,8 +29,6 @@ class Module
      * Bootstrap listener
      *
      * Attaches a listener to the RestController dispatch event.
-     *
-     * @param  MvcEvent $e
      */
     public function onBootstrap(MvcEvent $e)
     {

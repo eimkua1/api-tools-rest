@@ -11,13 +11,13 @@ namespace LaminasTest\ApiTools\Rest;
 use Laminas\ApiTools\Rest\Resource;
 use Laminas\ApiTools\Rest\ResourceEvent;
 use Laminas\EventManager\EventManager;
-use Laminas\InputFilter\InputFilter;
 use Laminas\Stdlib\Parameters;
 use PHPUnit\Framework\TestCase;
 
-/**
- * @subpackage UnitTest
- */
+use function array_values;
+use function get_class;
+use function var_export;
+
 class AbstractResourceListenerTest extends TestCase
 {
     /** @var null|string */
@@ -29,25 +29,25 @@ class AbstractResourceListenerTest extends TestCase
     /** @var Resource */
     private $resource;
 
-    /** @var EventManager */
-    private $events;
-
     /** @var TestAsset\TestResourceListener */
     private $listener;
 
-    public function setUp()
+    public function setUp(): void
     {
         $this->methodInvokedInListener = null;
         $this->paramsPassedToListener  = null;
 
         $this->resource = new Resource();
-        $this->events   = $events = new EventManager();
+        $events         = new EventManager();
         $this->resource->setEventManager($events);
 
         $this->listener = new TestAsset\TestResourceListener($this);
         $this->listener->attach($events);
     }
 
+    /**
+     * @return array[]
+     */
     public function events()
     {
         // Casting arrays to objects when the associated Resource method will
@@ -67,7 +67,6 @@ class AbstractResourceListenerTest extends TestCase
 
     /**
      * @dataProvider events
-     *
      * @param string $method
      * @param array $eventArgs
      */
@@ -127,7 +126,7 @@ class AbstractResourceListenerTest extends TestCase
     public function testDispatchShouldPassWhitelistedQueryParamsToFetchAllMethod()
     {
         $queryParams = new Parameters(['foo' => 'bar']);
-        $event = new ResourceEvent();
+        $event       = new ResourceEvent();
         $event->setName('fetchAll');
         $event->setQueryParams($queryParams);
 

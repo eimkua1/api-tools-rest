@@ -13,6 +13,9 @@ use Laminas\EventManager\ListenerAggregateInterface;
 
 class Listener implements ListenerAggregateInterface
 {
+    /**
+     * @param int $priority
+     */
     public function attach(EventManagerInterface $events, $priority = 1)
     {
     }

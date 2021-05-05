@@ -9,6 +9,7 @@
 namespace Laminas\ApiTools\Rest;
 
 use Laminas\EventManager\EventManagerAwareInterface;
+use Laminas\Paginator\Paginator;
 
 /**
  * Interface describing operations for a given resource.
@@ -19,7 +20,6 @@ interface ResourceInterface extends EventManagerAwareInterface
      * Set the event parameters
      *
      * @param array $params
-     *
      * @return self
      */
     public function setEventParams(array $params);
@@ -34,7 +34,6 @@ interface ResourceInterface extends EventManagerAwareInterface
     /**
      * @param string $name
      * @param mixed  $value
-     *
      * @return mixed
      */
     public function setEventParam($name, $value);
@@ -42,7 +41,6 @@ interface ResourceInterface extends EventManagerAwareInterface
     /**
      * @param mixed $name
      * @param mixed $default
-     *
      * @return mixed
      */
     public function getEventParam($name, $default = null);
@@ -108,7 +106,7 @@ interface ResourceInterface extends EventManagerAwareInterface
     /**
      * Fetch a collection of records
      *
-     * @return \Laminas\Paginator\Paginator
+     * @return Paginator
      */
     public function fetchAll();
 }

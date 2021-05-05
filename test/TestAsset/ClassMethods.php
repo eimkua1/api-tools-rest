@@ -8,11 +8,11 @@
 
 namespace LaminasTest\ApiTools\Rest\TestAsset;
 
-/**
- * @subpackage UnitTest
- */
 class ClassMethods
 {
+    /**
+     * @return string
+     */
     public function getFoo()
     {
         return 'bar';

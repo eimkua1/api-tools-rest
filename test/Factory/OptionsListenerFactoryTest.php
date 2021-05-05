@@ -22,25 +22,30 @@ class OptionsListenerFactoryTest extends TestCase
     /** @var OptionsListenerFactory */
     private $factory;
 
-    public function setUp()
+    public function setUp(): void
     {
         $this->services = new ServiceManager();
         $this->factory  = new OptionsListenerFactory();
     }
 
+    /**
+     * @return array[][]
+     */
     public function seedConfigService()
     {
-        return ['api-tools-rest' => [
-            'some-controller' => [
-                'listener'                => 'SomeListener',
-                'route_name'              => 'api.rest.some',
-                'route_identifer_name'    => 'some_id',
-                'entity_class'            => 'SomeEntity',
-                'entity_http_methods'     => ['GET', 'PATCH', 'DELETE'],
-                'collection_name'         => 'some',
-                'collection_http_methods' => ['GET', 'POST'],
+        return [
+            'api-tools-rest' => [
+                'some-controller' => [
+                    'listener'                => 'SomeListener',
+                    'route_name'              => 'api.rest.some',
+                    'route_identifer_name'    => 'some_id',
+                    'entity_class'            => 'SomeEntity',
+                    'entity_http_methods'     => ['GET', 'PATCH', 'DELETE'],
+                    'collection_name'         => 'some',
+                    'collection_http_methods' => ['GET', 'POST'],
+                ],
             ],
-        ]];
+        ];
     }
 
     public function testFactoryCreatesOptionsListenerFromRestConfiguration()

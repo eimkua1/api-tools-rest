@@ -21,9 +21,8 @@ use Laminas\Stdlib\Parameters;
 use LaminasTest\ApiTools\Rest\RouteMatchFactoryTrait;
 use PHPUnit\Framework\TestCase;
 
-/**
- * @subpackage UnitTest
- */
+use function method_exists;
+
 class RestParametersListenerTest extends TestCase
 {
     use RouteMatchFactoryTrait;
@@ -31,17 +30,11 @@ class RestParametersListenerTest extends TestCase
     /** @var Resource */
     private $resource;
 
-    /** @var RestController */
-    private $controller;
-
     /** @var RouteMatch|V2RouteMatch */
     private $matches;
 
     /** @var Parameters */
     private $query;
-
-    /** @var Request */
-    private $request;
 
     /** @var MvcEvent */
     private $event;
@@ -49,15 +42,17 @@ class RestParametersListenerTest extends TestCase
     /** @var RestParametersListener */
     private $listener;
 
-    public function setUp()
+    public function setUp(): void
     {
-        $this->resource   = $resource   = new Resource();
-        $this->controller = $controller = new RestController();
+        $this->resource = $resource = new Resource();
+
+        $controller = new RestController();
         $controller->setResource($resource);
 
-        $this->matches    = $matches    = $this->createRouteMatch([]);
-        $this->query      = $query      = new Parameters();
-        $this->request    = $request    = new Request();
+        $this->matches = $matches    = $this->createRouteMatch([]);
+        $this->query   = $query      = new Parameters();
+
+        $request = new Request();
         $request->setQuery($query);
 
         $this->event = new MvcEvent();
@@ -98,7 +93,7 @@ class RestParametersListenerTest extends TestCase
         $identifiers = method_exists($sharedEventManager, 'getEvents')
             ? RestController::class
             : [RestController::class];
-        $listeners = $sharedEventManager->getListeners($identifiers, MvcEvent::EVENT_DISPATCH);
+        $listeners   = $sharedEventManager->getListeners($identifiers, MvcEvent::EVENT_DISPATCH);
 
         $this->assertCount(1, $listeners);
     }
@@ -114,7 +109,7 @@ class RestParametersListenerTest extends TestCase
         $identifiers = method_exists($sharedEventManager, 'getEvents')
             ? RestController::class
             : [RestController::class];
-        $listeners = $sharedEventManager->getListeners($identifiers, MvcEvent::EVENT_DISPATCH);
+        $listeners   = $sharedEventManager->getListeners($identifiers, MvcEvent::EVENT_DISPATCH);
 
         $this->assertCount(0, $listeners);
     }
